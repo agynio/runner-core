@@ -1,0 +1,17 @@
+# Binaries
+bin/
+*.exe
+*.test
+
+# Build artifacts
+coverage/
+dist/
+
+# Editor
+.DS_Store
+*.swp
+*.swo
+.*.sw?
+
+# Buffers / temp
+tmp/
