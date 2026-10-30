@@ -66,7 +66,7 @@ func (r *Reporter) Observe(ctx context.Context, observation backend.Observation)
 	if !r.changed(observation.WorkloadID, observation.Status) {
 		return
 	}
-	r.report(ctx, observation.WorkloadID, observation.Status)
+	r.report(ctx, observation.WorkloadID, observation.Status, observation.SnapshotSizeBytes)
 }
 
 // Forget drops a workload's last reported status so one restarted under the
@@ -94,15 +94,16 @@ func (r *Reporter) changed(workloadID string, observed runnersv1.WorkloadStatus)
 // report is best-effort. A failure is retried a few times and then dropped: the
 // Orchestrator's reconciliation is the backstop, so a runner that cannot report
 // is behind on latency, not on correctness.
-func (r *Reporter) report(ctx context.Context, workloadID string, observed runnersv1.WorkloadStatus) {
+func (r *Reporter) report(ctx context.Context, workloadID string, observed runnersv1.WorkloadStatus, snapshotSizeBytes *int64) {
 	observedAt := timestamppb.Now()
 	for attempt := 0; attempt < retryAttempts; attempt++ {
 		callCtx, cancel := context.WithTimeout(ctx, reportTimeout)
 		_, err := r.gateway.ReportWorkloadState(callCtx, &runnersv1.ReportWorkloadStateRequest{
-			ServiceToken: r.serviceToken,
-			WorkloadId:   workloadID,
-			Status:       observed,
-			ObservedAt:   observedAt,
+			ServiceToken:      r.serviceToken,
+			WorkloadId:        workloadID,
+			Status:            observed,
+			ObservedAt:        observedAt,
+			SnapshotSizeBytes: snapshotSizeBytes,
 		})
 		cancel()
 		if err == nil {

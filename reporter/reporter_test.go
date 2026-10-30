@@ -78,6 +78,27 @@ func TestObservePassesTheStatusThroughUnchanged(t *testing.T) {
 	}
 }
 
+// The size of a hibernated workload's persisted state travels with the
+// status, since it is what the platform meters while the workload sleeps.
+func TestObserveCarriesTheSnapshotSize(t *testing.T) {
+	gateway := &recordingGateway{}
+	r := New(gateway, "token", zap.NewNop())
+	size := int64(461 << 20)
+
+	r.Observe(context.Background(), backend.Observation{WorkloadID: "workload-1", Status: runnersv1.WorkloadStatus_WORKLOAD_STATUS_HIBERNATED, SnapshotSizeBytes: &size})
+	r.Observe(context.Background(), backend.Observation{WorkloadID: "workload-1", Status: runnersv1.WorkloadStatus_WORKLOAD_STATUS_RUNNING})
+
+	if len(gateway.reports) != 2 {
+		t.Fatalf("expected two reports, got %d", len(gateway.reports))
+	}
+	if got := gateway.reports[0].GetSnapshotSizeBytes(); got != size {
+		t.Fatalf("expected the hibernated report to carry %d bytes, got %d", size, got)
+	}
+	if gateway.reports[1].SnapshotSizeBytes != nil {
+		t.Fatal("expected the running report to carry no snapshot size")
+	}
+}
+
 // A platform older than this RPC answers Unimplemented; the runner keeps
 // serving and simply stops trying to help, without retrying.
 func TestObserveGivesUpOnUnimplemented(t *testing.T) {

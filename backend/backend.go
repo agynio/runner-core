@@ -141,4 +141,8 @@ type Observer interface {
 type Observation struct {
 	WorkloadID string
 	Status     runnersv1.WorkloadStatus
+	// SnapshotSizeBytes is the size of the persisted state a hibernated
+	// workload occupies, which the platform meters. Set with the hibernated
+	// status by a backend that hibernates; nil otherwise.
+	SnapshotSizeBytes *int64
 }
